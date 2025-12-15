@@ -16,12 +16,27 @@ export async function GET() {
             include: {
                 user: { select: { name: true, email: true, phone: true } },
                 location: { select: { name: true } },
-                combo: { select: { name: true, duration: true } },
+                room: { select: { name: true, type: true } },
                 payment: { select: { status: true, method: true } },
             },
         })
 
-        return NextResponse.json(bookings)
+        // Transform bookings for backward compatibility with frontend
+        const transformedBookings = bookings.map(b => ({
+            ...b,
+            // Map room to combo-like structure for existing frontend
+            combo: b.room ? { name: b.room.name, duration: 60 } : null,
+            // Use customerName or user.name for display
+            user: {
+                name: b.customerName || b.user?.name || 'N/A',
+                email: b.customerEmail || b.user?.email || '',
+                phone: b.customerPhone || b.user?.phone || '',
+            },
+            // Map estimatedAmount to totalAmount for backward compat
+            totalAmount: b.estimatedAmount,
+        }))
+
+        return NextResponse.json(transformedBookings)
     } catch (error) {
         console.error('Error fetching bookings:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

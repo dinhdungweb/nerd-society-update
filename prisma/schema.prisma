@@ -72,6 +72,34 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// =====================================================
+// ROOM MANAGEMENT
+// =====================================================
+
+enum RoomType {
+  MEETING_LONG    // Meeting Room 1 - Bàn dài
+  MEETING_ROUND   // Meeting Room 2 - Bàn tròn
+  POD_MONO        // Mono Pod (1 người)
+  POD_MULTI       // Multi Pod (2 người)
+}
+
+// Room - Individual bookable spaces
+model Room {
+  id          String    @id @default(cuid())
+  name        String    // "Meeting Room 1", "Mono Pod A"...
+  type        RoomType
+  description String?
+  capacity    Int       // Sức chứa tối đa
+  amenities   String[]  // ["Máy chiếu", "Bảng trắng", ...]
+  image       String?
+  isActive    Boolean   @default(true)
+  location    Location  @relation(fields: [locationId], references: [id])
+  locationId  String
+  bookings    Booking[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
 // Location - Nerd Society branches
 model Location {
   id        String    @id @default(cuid())
@@ -81,12 +109,54 @@ model Location {
   mapUrl    String?
   image     String?
   isActive  Boolean   @default(true)
+  rooms     Room[]
   bookings  Booking[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
 
-// Combo - Service packages
+// =====================================================
+// SERVICE & PRICING
+// =====================================================
+
+enum ServiceType {
+  MEETING
+  POD_MONO
+  POD_MULTI
+}
+
+// Service - Service types with pricing (replaces Combo)
+model Service {
+  id              String      @id @default(cuid())
+  name            String      // "Meeting Room", "Mono Pod", "Multi Pod"
+  slug            String      @unique
+  type            ServiceType
+  description     String?
+  
+  // Pricing - Meeting (theo số người)
+  priceSmall      Int?        // < 8 người: 80.000
+  priceLarge      Int?        // 8-20 người: 100.000
+  
+  // Pricing - Pod (giờ đầu + giờ sau)
+  priceFirstHour  Int?        // Giá giờ đầu (19k/29k)
+  pricePerHour    Int?        // Giá từ giờ 2 tính theo phút (15k/25k)
+  
+  // Nerd Coin
+  nerdCoinReward  Int         @default(0)  // Số coin tặng (0, 1, 2)
+  
+  minDuration     Int         @default(60) // Thời gian tối thiểu (phút)
+  timeStep        Int         @default(30) // Bước nhảy (15 cho Pod, 30 cho Meeting)
+  
+  features        String[]
+  icon            String?
+  isActive        Boolean     @default(true)
+  sortOrder       Int         @default(0)
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+// Keep Combo for backward compatibility (deprecated)
 model Combo {
   id          String    @id @default(cuid())
   name        String
@@ -99,45 +169,94 @@ model Combo {
   isPopular   Boolean   @default(false)
   isActive    Boolean   @default(true)
   sortOrder   Int       @default(0)
-  bookings    Booking[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
 
-// Booking - Customer reservations
-model Booking {
-  id          String        @id @default(cuid())
-  bookingCode String        @unique // e.g., NERD-20241214-001
-  user        User          @relation(fields: [userId], references: [id])
-  userId      String
-  location    Location      @relation(fields: [locationId], references: [id])
-  locationId  String
-  combo       Combo         @relation(fields: [comboId], references: [id])
-  comboId     String
-  date        DateTime      @db.Date
-  startTime   String        // "08:00"
-  endTime     String        // "11:00"
-  guests      Int           @default(1)
-  status      BookingStatus @default(PENDING)
-  payment     Payment?
-  totalAmount Int
-  note        String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+// =====================================================
+// BOOKING SYSTEM
+// =====================================================
 
-  @@index([userId])
-  @@index([locationId])
-  @@index([date])
-  @@index([status])
+enum BookingSource {
+  WEBSITE       // Khách tự book online
+  ONSITE        // Nhân viên book tại quầy
+  PHONE         // Đặt qua điện thoại
+  ZALO          // Đặt qua Zalo
+}
+
+enum DepositStatus {
+  PENDING       // Chưa cọc
+  PAID_ONLINE   // Đã cọc online
+  PAID_CASH     // Đã cọc tiền mặt
+  WAIVED        // Miễn cọc (walk-in tin tưởng)
 }
 
 enum BookingStatus {
-  PENDING     // Chờ xác nhận
-  CONFIRMED   // Đã xác nhận
-  CHECKED_IN  // Đã check-in
-  COMPLETED   // Hoàn thành
-  CANCELLED   // Đã hủy
-  NO_SHOW     // Không đến
+  PENDING       // Chờ cọc
+  CONFIRMED     // Đã cọc, chờ check-in
+  IN_PROGRESS   // Đang sử dụng (sau check-in)
+  COMPLETED     // Hoàn tất (sau check-out + thanh toán)
+  CANCELLED     // Đã hủy
+  NO_SHOW       // Không đến
+}
+
+// Booking - Customer reservations
+model Booking {
+  id              String        @id @default(cuid())
+  bookingCode     String        @unique // e.g., NERD-20241214-001
+  
+  // Customer Info (có thể không cần User account)
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id])
+  customerName    String
+  customerPhone   String
+  customerEmail   String?
+  
+  // Room & Location
+  room            Room          @relation(fields: [roomId], references: [id])
+  roomId          String
+  location        Location      @relation(fields: [locationId], references: [id])
+  locationId      String
+  
+  // Time - Dự kiến
+  date            DateTime      @db.Date
+  startTime       String        // "08:00" (dự kiến)
+  endTime         String        // "11:00" (dự kiến)
+  guests          Int           @default(1)
+  
+  // Time - Thực tế (ghi nhận khi check-in/out)
+  actualStartTime DateTime?     // Thời điểm check-in
+  actualEndTime   DateTime?     // Thời điểm check-out
+  
+  // Pricing
+  estimatedAmount Int           // Giá dự tính khi book
+  depositAmount   Int           // Tiền cọc (50%)
+  depositStatus   DepositStatus @default(PENDING)
+  depositPaidAt   DateTime?
+  
+  actualAmount    Int?          // Giá thực tế sau check-out
+  remainingAmount Int?          // Số tiền còn lại cần thu
+  
+  // Nerd Coin
+  nerdCoinIssued  Int           @default(0)   // Số coin đã phát
+  nerdCoinIssuedAt DateTime?
+  
+  // Booking metadata
+  source          BookingSource @default(WEBSITE)
+  status          BookingStatus @default(PENDING)
+  note            String?
+  
+  // Relations
+  payment         Payment?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([roomId])
+  @@index([locationId])
+  @@index([date])
+  @@index([status])
+  @@index([customerPhone])
 }
 
 // Payment - Payment records
@@ -180,6 +299,10 @@ model Setting {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// =====================================================
+// CONTENT MANAGEMENT
+// =====================================================
 
 // Post - News and Events
 model Post {

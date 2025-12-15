@@ -3,6 +3,19 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { NextResponse } from 'next/server'
 
+// GET - Lấy danh sách locations
+export async function GET() {
+    try {
+        const locations = await prisma.location.findMany({
+            orderBy: { name: 'asc' },
+        })
+        return NextResponse.json(locations)
+    } catch (error) {
+        console.error('Error fetching locations:', error)
+        return NextResponse.json({ error: 'Failed to fetch locations' }, { status: 500 })
+    }
+}
+
 export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions)

@@ -30,9 +30,11 @@ const navigationGroups = [
     {
         name: 'Quản lý đặt lịch',
         items: [
+            { name: 'Lịch đặt phòng', href: '/admin/calendar', icon: CalendarDaysIcon },
             { name: 'Bookings', href: '/admin/bookings', icon: CalendarDaysIcon },
-            { name: 'Combos', href: '/admin/combos', icon: CubeIcon },
-            { name: 'Locations', href: '/admin/locations', icon: BuildingStorefrontIcon },
+            { name: 'Phòng', href: '/admin/rooms', icon: CubeIcon },
+            { name: 'Dịch vụ', href: '/admin/services', icon: CubeIcon },
+            { name: 'Cơ sở', href: '/admin/locations', icon: BuildingStorefrontIcon },
         ]
     },
     {

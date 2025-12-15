@@ -55,31 +55,43 @@ async function getStats() {
 }
 
 async function getRecentBookings() {
-    return prisma.booking.findMany({
+    const bookings = await prisma.booking.findMany({
         take: 5,
         orderBy: { createdAt: 'desc' },
         include: {
             user: { select: { name: true, email: true } },
             location: { select: { name: true } },
-            combo: { select: { name: true } },
+            room: { select: { name: true, type: true } },
         },
     })
+    // Transform for backward compatibility
+    return bookings.map(b => ({
+        ...b,
+        combo: b.room ? { name: b.room.name } : { name: 'N/A' },
+        totalAmount: b.estimatedAmount,
+        user: {
+            name: b.customerName || b.user?.name || 'Khách',
+            email: b.customerEmail || b.user?.email || '',
+        },
+    }))
 }
 
 const statusLabels: Record<string, string> = {
-    PENDING: 'Chờ xác nhận',
+    PENDING: 'Chờ cọc',
     CONFIRMED: 'Đã xác nhận',
-    CHECKED_IN: 'Đã check-in',
+    IN_PROGRESS: 'Đang sử dụng',
     COMPLETED: 'Hoàn thành',
     CANCELLED: 'Đã hủy',
+    NO_SHOW: 'Không đến',
 }
 
 const statusStyles: Record<string, string> = {
     PENDING: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
     CONFIRMED: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800',
-    CHECKED_IN: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800',
+    IN_PROGRESS: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800',
     COMPLETED: 'bg-neutral-100 text-neutral-600 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700',
     CANCELLED: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
+    NO_SHOW: 'bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-500 dark:border-neutral-700',
 }
 
 const quickActions = [
@@ -166,8 +178,8 @@ export default async function AdminDashboard() {
                                 <stat.icon className={`size-6 text-${stat.gradient.includes('emerald') ? 'emerald' : stat.gradient.includes('blue') ? 'blue' : stat.gradient.includes('amber') ? 'amber' : 'purple'}-600 dark:text-${stat.gradient.includes('emerald') ? 'emerald' : stat.gradient.includes('blue') ? 'blue' : stat.gradient.includes('amber') ? 'amber' : 'purple'}-400`} />
                             </div>
                             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${stat.trend === 'up'
-                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
-                                    : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+                                : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
                                 }`}>
                                 {stat.trend === 'up' ? (
                                     <ArrowTrendingUpIcon className="size-3" />
@@ -264,10 +276,10 @@ export default async function AdminDashboard() {
                                         <td className="whitespace-nowrap px-6 py-4">
                                             <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${statusStyles[booking.status]}`}>
                                                 <span className={`size-1.5 rounded-full ${booking.status === 'PENDING' ? 'bg-amber-500' :
-                                                        booking.status === 'CONFIRMED' ? 'bg-blue-500' :
-                                                            booking.status === 'CHECKED_IN' ? 'bg-emerald-500' :
-                                                                booking.status === 'COMPLETED' ? 'bg-neutral-500' :
-                                                                    'bg-red-500'
+                                                    booking.status === 'CONFIRMED' ? 'bg-blue-500' :
+                                                        booking.status === 'IN_PROGRESS' ? 'bg-emerald-500' :
+                                                            booking.status === 'COMPLETED' ? 'bg-neutral-500' :
+                                                                'bg-red-500'
                                                     }`} />
                                                 {statusLabels[booking.status]}
                                             </span>

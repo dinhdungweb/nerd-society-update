@@ -30,16 +30,16 @@ interface Booking {
 const statusColors: Record<string, string> = {
     PENDING: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
     CONFIRMED: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800',
-    CHECKED_IN: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800',
+    IN_PROGRESS: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800',
     COMPLETED: 'bg-neutral-100 text-neutral-600 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700',
     CANCELLED: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
     NO_SHOW: 'bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-500 dark:border-neutral-700',
 }
 
 const statusLabels: Record<string, string> = {
-    PENDING: 'Chờ xác nhận',
+    PENDING: 'Chờ cọc',
     CONFIRMED: 'Đã xác nhận',
-    CHECKED_IN: 'Đã check-in',
+    IN_PROGRESS: 'Đang sử dụng',
     COMPLETED: 'Hoàn thành',
     CANCELLED: 'Đã hủy',
     NO_SHOW: 'Không đến',
@@ -48,7 +48,7 @@ const statusLabels: Record<string, string> = {
 const statusDots: Record<string, string> = {
     PENDING: 'bg-amber-500',
     CONFIRMED: 'bg-blue-500',
-    CHECKED_IN: 'bg-emerald-500',
+    IN_PROGRESS: 'bg-emerald-500',
     COMPLETED: 'bg-neutral-500',
     CANCELLED: 'bg-red-500',
     NO_SHOW: 'bg-neutral-400',

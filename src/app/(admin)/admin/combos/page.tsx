@@ -10,9 +10,6 @@ import AddComboWrapper from '@/components/admin/AddComboWrapper'
 async function getCombos() {
     return prisma.combo.findMany({
         orderBy: { sortOrder: 'asc' },
-        include: {
-            _count: { select: { bookings: true } },
-        },
     })
 }
 
@@ -98,7 +95,7 @@ export default async function CombosPage() {
                         {/* Stats */}
                         <div className="mt-4 border-t border-neutral-200 pt-4 dark:border-neutral-700">
                             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                                {combo._count.bookings} lượt đặt
+                                {combo.isActive ? 'Đang hoạt động' : 'Tạm ngưng'}
                             </p>
                         </div>
 

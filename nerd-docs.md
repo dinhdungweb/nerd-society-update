@@ -167,5 +167,7 @@ Google Calendar quyết định giờ trống
 Sapo chỉ dùng để thu tiền
 
 
-
+Admin UI: Trang quản lý Rooms, Services, xem Calendar
+Booking API: API cho luồng đặt phòng mới
+Frontend Booking: Giao diện đặt phòng cho khách
 

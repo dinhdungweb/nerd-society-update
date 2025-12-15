@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, RoomType, ServiceType } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -22,7 +22,7 @@ async function main() {
     console.log('✅ Admin user created:', admin.email)
 
     // Create locations
-    await prisma.location.upsert({
+    const locationHTM = await prisma.location.upsert({
         where: { id: 'loc-ho-tung-mau' },
         update: {},
         create: {
@@ -49,7 +49,111 @@ async function main() {
     })
     console.log('✅ Locations created: 2')
 
-    // Create combos
+    // Create Rooms for Hồ Tùng Mậu location
+    const rooms = [
+        {
+            id: 'room-meeting-1',
+            name: 'Meeting Room 1 - Bàn dài',
+            type: RoomType.MEETING_LONG,
+            description: 'Phòng họp bàn dài, phù hợp cho họp nhóm lớn, thuyết trình, workshop',
+            capacity: 20,
+            amenities: ['Máy chiếu', 'Điều hòa', 'Bảng trắng', 'Pantry tự phục vụ'],
+            locationId: locationHTM.id,
+        },
+        {
+            id: 'room-meeting-2',
+            name: 'Meeting Room 2 - Bàn tròn',
+            type: RoomType.MEETING_ROUND,
+            description: 'Phòng họp bàn tròn, phù hợp cho họp nhóm nhỏ, thảo luận',
+            capacity: 10,
+            amenities: ['Máy chiếu', 'Điều hòa', 'Bảng trắng', 'Pantry tự phục vụ'],
+            locationId: locationHTM.id,
+        },
+        {
+            id: 'room-pod-mono',
+            name: 'Mono Pod',
+            type: RoomType.POD_MONO,
+            description: 'Pod cá nhân cho 1 người, yên tĩnh tuyệt đối',
+            capacity: 1,
+            amenities: ['Ổ cắm điện', 'WiFi tốc độ cao', 'Điều hòa', 'Đèn đọc sách'],
+            locationId: locationHTM.id,
+        },
+        {
+            id: 'room-pod-multi',
+            name: 'Multi Pod',
+            type: RoomType.POD_MULTI,
+            description: 'Pod đôi cho 2 người, phù hợp học nhóm nhỏ',
+            capacity: 2,
+            amenities: ['Ổ cắm điện', 'WiFi tốc độ cao', 'Điều hòa', 'Đèn đọc sách'],
+            locationId: locationHTM.id,
+        },
+    ]
+
+    for (const room of rooms) {
+        await prisma.room.upsert({
+            where: { id: room.id },
+            update: {},
+            create: room,
+        })
+    }
+    console.log('✅ Rooms created:', rooms.length)
+
+    // Create Services with pricing
+    const services = [
+        {
+            slug: 'meeting-room',
+            name: 'Meeting Room',
+            type: ServiceType.MEETING,
+            description: 'Phòng họp cho nhóm, thích hợp workshop, brainstorm',
+            priceSmall: 80000,    // < 8 người
+            priceLarge: 100000,   // 8-20 người
+            nerdCoinReward: 0,
+            minDuration: 60,
+            timeStep: 30,
+            features: ['Máy chiếu', 'Điều hòa', 'Bảng trắng', 'Pantry tự phục vụ'],
+            icon: 'users',
+            sortOrder: 1,
+        },
+        {
+            slug: 'mono-pod',
+            name: 'Mono Pod',
+            type: ServiceType.POD_MONO,
+            description: 'Pod cá nhân yên tĩnh cho 1 người',
+            priceFirstHour: 19000,
+            pricePerHour: 15000,
+            nerdCoinReward: 1,
+            minDuration: 60,
+            timeStep: 15,
+            features: ['Không gian riêng tư', 'Yên tĩnh tuyệt đối', 'Ổ cắm điện', 'WiFi cao tốc'],
+            icon: 'user',
+            sortOrder: 2,
+        },
+        {
+            slug: 'multi-pod',
+            name: 'Multi Pod',
+            type: ServiceType.POD_MULTI,
+            description: 'Pod đôi cho 2 người học/làm việc cùng nhau',
+            priceFirstHour: 29000,
+            pricePerHour: 25000,
+            nerdCoinReward: 2,
+            minDuration: 60,
+            timeStep: 15,
+            features: ['Không gian cho 2 người', 'Yên tĩnh', 'Ổ cắm điện', 'WiFi cao tốc'],
+            icon: 'users',
+            sortOrder: 3,
+        },
+    ]
+
+    for (const service of services) {
+        await prisma.service.upsert({
+            where: { slug: service.slug },
+            update: {},
+            create: service,
+        })
+    }
+    console.log('✅ Services created:', services.length)
+
+    // Create Combos for backward compatibility with frontend
     const combos = [
         { slug: 'combo-1h', name: 'Combo 1 Giờ', duration: 60, price: 25000, description: 'Trải nghiệm không gian trong 1 giờ', features: ['1 giờ sử dụng', '1 đồ uống miễn phí', 'WiFi tốc độ cao'], icon: 'clock', isPopular: false, sortOrder: 1 },
         { slug: 'combo-3h', name: 'Combo 3 Giờ', duration: 180, price: 55000, description: 'Combo dành cho buổi học nhóm ngắn', features: ['3 giờ sử dụng', '2 đồ uống miễn phí', 'WiFi tốc độ cao', 'Ổ cắm điện'], icon: 'coffee', isPopular: true, sortOrder: 2 },
